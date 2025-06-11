@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>超集合在线Web</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #fff;
+            border-bottom: 1px solid #fff;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .nav-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .nav-button {
+            padding: 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .nav-button:hover {
+            background-color: #0b7dda;
+        }
+        .response-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success-message {
+            color: #28a745;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+        
+        /* 新增：等待提示的样式 - 悬浮在输入框附近 */
+        .input-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none; /* 默认隐藏 */
+        }
+        .input-loading-message {
+            background-color: #fff;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            max-width: 80%;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* 新增：空输入提示的样式 - 使用默认黑色文字 */
+        .empty-input-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            display: none; /* 默认隐藏 */
+        }
+        .empty-input-message {
+            background-color: #fff;
+            padding: 15px 25px;
+            border-radius: 4px;
+            font-size: 16px;
+            color: black; /* 明确设置为黑色 */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            max-width: 80%;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* 新增：格式错误提示的样式 - 与空输入提示相同样式 */
+        .format-error-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1002;
+            display: none; /* 默认隐藏 */
+        }
+        .format-error-message {
+            background-color: #fff;
+            padding: 15px 25px;
+            border-radius: 4px;
+            font-size: 16px;
+            color: black; /* 明确设置为黑色 */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            max-width: 80%;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="tabs">
+        <div class="tab active" data-tab="formTab1">喜欢关键词</div>
+        <div class="tab" data-tab="formTab2">讨厌关键词</div>
+        <div class="tab" data-tab="formTab3">Spt密钥</div>
+        <div class="tab" data-tab="navTab">导航按钮页</div>
+    </div>
+
+    <!-- 表单提交页1 - 喜欢关键词 -->
+    <div id="formTab1" class="tab-content active">
+        <h2>喜欢词组设定</h2>
+        <form id="form1">
+            <!-- 修改标签文字为"设备id：" -->
+            <label for="sbid1">设备id：</label>
+            <input type="text" id="sbid1" name="sbid" value="noid" readonly style="background-color: #f1f1f1; cursor: not-allowed;">
+            
+            <select id="issueId1" name="issueId">
+                <option value="ICDSK6">快手</option>
+            </select>
+            <select id="keywordSelect1">
+                <option value="">-- 快速选择(常用词) --</option>
+                <option value="下单/支付/包邮/购物/去看直播/直播中/抢购/购买/旗舰店/专卖店/个体店/企业店/小店/包邮/热卖/卖货/立抢/爆款/如何省钱/直播间告诉你/实惠价格/点击进入直播/退货/运费/严选/坏了包/已售.+件/破损/无理由/包退/晚发/立赔">商品购物</option>
+                <option value="捕/鱼/大咖/鱼乐/达人/三人行/老六/乡村/狠小志">捕鱼游戏</option>
+                <option value="爆款游戏.*捕鱼大咖/捕鱼大咖.*爆款游戏/老六.*捕鱼大咖">指定捕鱼广告</option>
+            </select>
+            <label for="body1">内容：</label>
+            <textarea id="body1" name="body" rows="6" placeholder="词组填写示例：立即购买/立即抢购/了解详情"></textarea>
+            
+            <button type="submit">提交生成ID</button>
+        </form>
+    </div>
+
+    <!-- 表单提交页2 - 讨厌关键词 -->
+    <div id="formTab2" class="tab-content">
+        <h2>讨厌词组设定</h2>
+        <form id="form2">
+            <!-- 修改标签文字为"设备id：" -->
+            <label for="sbid2">设备id：</label>
+            <input type="text" id="sbid2" name="sbid" value="noid" readonly style="background-color: #f1f1f1; cursor: not-allowed;">
+            
+            <select id="issueId2" name="issueId">
+                <option value="ICDT98">快手</option>
+            </select>
+            <select id="keywordSelect2">
+                <option value="">-- 快速选择(常用词) --</option>
+                <option value="跳转微信/点我玩玩/试玩游戏/立即试玩/点击即玩/去玩游戏/点击立玩/跳转游戏/无需下载/无需安装/短剧/剧场/新剧/免费观看/热播剧/下一集/立即观看/继续观看/观看全集/观看更多/几集/题材/剧情/免费看视频/抢先看/看全集/超级汇/珠海小叮当/点击额外获取.+金币">自定义词组</option>
+            </select>
+            <label for="body2">内容：</label>
+            <textarea id="body2" name="body" rows="6" placeholder="词组填写示例：立即购买/立即抢购/了解详情"></textarea>
+            
+            <button type="submit">提交生成ID</button>
+        </form>
+    </div>
+
+    <!-- 新增的表单提交页3 - Spt密钥 -->
+    <div id="formTab3" class="tab-content">
+        <h2>Spt密钥设定</h2>
+        <form id="form3">
+            <!-- 修改标签文字为"设备id：" -->
+            <label for="sbid3">设备id：</label>
+            <input type="text" id="sbid3" name="sbid" value="noid" readonly style="background-color: #f1f1f1; cursor: not-allowed;">
+            
+            <select id="issueId3" name="issueId">
+                <option value="ICE5C7">Spt</option>
+            </select>
+            <label for="body3">内容：</label>
+            <textarea id="body3" name="body" rows="6" placeholder="密钥填写示例：SPT_XXXXXXXXXXX"></textarea>
+            
+            <button type="submit">提交生成ID</button>
+        </form>
+    </div>
+
+    <!-- 导航按钮页 -->
+    <div id="navTab" class="tab-content">
+        <h2>导航按钮</h2>
+        <div class="nav-buttons">
+            <button class="nav-button" onclick="navigateTo('https://gitee.com/sutcok/faq/issues/ICBTVH')">疑难杂症(脚本问题)</button>
+            <button class="nav-button" onclick="navigateTo('https://gitee.com/sutcok/input/issues')">查看已生成的ID词</button>
+            <button class="nav-button" onclick="navigateTo('https://www.123865.com/s/YHB7Vv-6vBsA')">123云盘资源</button>
+            <button class="nav-button" onclick="navigateTo('https://share.feijipan.com/s/dDGrC7rQ')">下载脚本(飞机盘)</button>
+            <button class="nav-button" onclick="navigateTo('https://www.wenshushu.cn')">文叔叔(文件上传)</button>
+            <button class="nav-button" onclick="navigateTo('https://gitee.com/sutcok/chaojihe/blob/master/top.html')">金币记录排行榜</button>
+            <button class="nav-button" onclick="navigateTo('https://wxpusher.zjiecode.com/api/qrcode/RwjGLMOPTYp35zSYQr0HxbCPrV9eU0wKVBXU1D5VVtya0cQXEJWPjqBdW3gKLifS.jpg')">在线申请Spt密钥(微通知)</button>
+        </div>
+    </div>
+
+    <!-- 响应内容显示区域 -->
+    <div id="responseContainer" class="response-container" style="display: none;">
+        <h3>服务器响应：</h3>
+        <pre id="responseContent"></pre>
+        <div id="idDisplay" style="margin-top: 10px; font-weight: bold;"></div>
+        <div id="successMessage" class="success-message"></div>
+        <div id="errorMessage" class="error-message"></div>
+    </div>
+
+    <!-- 新增：等待提示的HTML结构 - 悬浮在输入框附近 -->
+    <div class="input-loading-overlay" id="inputLoadingOverlay">
+        <div class="input-loading-message">
+            正在提交，请耐心等待...
+        </div>
+    </div>
+    
+    <!-- 新增：空输入提示的HTML结构 -->
+    <div class="empty-input-overlay" id="emptyInputOverlay">
+        <div class="empty-input-message">
+            内容不能为空，请重新填写！
+        </div>
+    </div>
+    
+    <!-- 新增：格式错误提示的HTML结构 -->
+    <div class="format-error-overlay" id="formatErrorOverlay">
+        <div class="format-error-message">
+            SPT格式错误，请重新填写
+        </div>
+    </div>
+
+    <script>
+        // 获取URL中的sbid参数值，如果没有则返回noid
+        function getSbidFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('sbid') || 'noid';
+        }
+
+        // 标签页切换功能
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                
+                // 移除所有标签页和内容的active类
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // 添加active类到当前标签页和内容
+                tab.classList.add('active');
+                document.getElementById(tabId).classList.add('active');
+                
+                // 切换标签页时清除响应提示
+                clearResponse();
+            });
+        });
+
+        // 清除响应提示的函数
+        function clearResponse() {
+            const responseContainer = document.getElementById('responseContainer');
+            const responseContent = document.getElementById('responseContent');
+            const idDisplay = document.getElementById('idDisplay');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            const formatErrorOverlay = document.getElementById('formatErrorOverlay');
+            
+            // 隐藏响应容器
+            responseContainer.style.display = 'none';
+            formatErrorOverlay.style.display = 'none';
+            
+            // 清空内容
+            responseContent.textContent = '';
+            idDisplay.textContent = '';
+            successMessage.textContent = '';
+            errorMessage.textContent = '';
+        }
+
+        // 表单1提交处理
+        document.getElementById('form1').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const issueId = document.getElementById('issueId1').value;
+            const bodyContent = document.getElementById('body1').value;
+            
+            // 检查输入框是否为空
+            if (!bodyContent.trim()) {
+                showEmptyInputMessage();
+                return;
+            }
+            
+            // 获取sbid值
+            const sbidValue = document.getElementById('sbid1').value;
+            
+            // 处理特殊词组
+            const processedBody = processSpecialWords(bodyContent);
+            
+            // 拼接sbid和bodyContent
+            const finalContent = `${sbidValue}---${processedBody}`;
+            
+            // 提交表单
+            submitForm(this, `https://gitee.com/api/v5/repos/sutcok/input/issues/${issueId}/comments`, '表单1', finalContent);
+        });
+
+        // 表单2提交处理
+        document.getElementById('form2').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const issueId = document.getElementById('issueId2').value;
+            const bodyContent = document.getElementById('body2').value;
+            
+            // 检查输入框是否为空
+            if (!bodyContent.trim()) {
+                showEmptyInputMessage();
+                return;
+            }
+            
+            // 获取sbid值
+            const sbidValue = document.getElementById('sbid2').value;
+            
+            // 处理特殊词组
+            const processedBody = processSpecialWords(bodyContent);
+            
+            // 拼接sbid和bodyContent
+            const finalContent = `${sbidValue}---${processedBody}`;
+            
+            // 提交表单
+            submitForm(this, `https://gitee.com/api/v5/repos/sutcok/input/issues/${issueId}/comments`, '表单2', finalContent);
+        });
+
+        // 表单3提交处理
+        document.getElementById('form3').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const issueId = document.getElementById('issueId3').value;
+            const bodyContent = document.getElementById('body3').value;
+            
+            // 检查输入框是否为空
+            if (!bodyContent.trim()) {
+                showEmptyInputMessage();
+                return;
+            }
+            
+            // 检查SPT格式
+            if (!bodyContent.startsWith('SPT')) {
+                showFormatErrorMessage();
+                return;
+            }
+            
+            // 获取sbid值
+            const sbidValue = document.getElementById('sbid3').value;
+            
+            // 处理特殊词组
+            const processedBody = processSpecialWords(bodyContent);
+            
+            // 拼接sbid和bodyContent
+            const finalContent = `${sbidValue}---${processedBody}`;
+            
+            // 提交表单
+            submitForm(this, `https://gitee.com/api/v5/repos/sutcok/input/issues/${issueId}/comments`, '表单3', finalContent);
+        });
+
+        // 处理特殊词组的函数
+        function processSpecialWords(text) {
+            // 1. 删除所有空格
+            text = text.replace(/\s+/g, '');
+            
+            // 2. 处理第一个字符是"/"的情况
+            if (text.startsWith('/')) {
+                text = text.substring(1);
+            }
+            
+            // 3. 处理最后一个字符是"/"的情况
+            if (text.endsWith('/')) {
+                text = text.substring(0, text.length - 1);
+            }
+            
+            // 4. 处理中间的"//"替换为"/"
+            text = text.replace(/\/\//g, '/');
+            
+            // 5. 处理"捕鱼"和"传奇"的替换
+            text = text.replace(/捕鱼/g, '捕=鱼');
+            text = text.replace(/传奇/g, '传=奇');
+            
+            return text;
+        }
+
+        // 显示空输入提示的函数
+        function showEmptyInputMessage() {
+            const emptyInputOverlay = document.getElementById('emptyInputOverlay');
+            emptyInputOverlay.style.display = 'flex';
+            
+            // 2秒后自动消失
+            setTimeout(() => {
+                emptyInputOverlay.style.display = 'none';
+            }, 2000); // 2000毫秒 = 2秒
+        }
+
+        // 显示格式错误提示的函数
+        function showFormatErrorMessage() {
+            const formatErrorOverlay = document.getElementById('formatErrorOverlay');
+            formatErrorOverlay.style.display = 'flex';
+            
+            // 2秒后自动消失
+            setTimeout(() => {
+                formatErrorOverlay.style.display = 'none';
+            }, 2000); // 2000毫秒 = 2秒
+        }
+
+        // 通用表单提交函数
+        function submitForm(form, apiUrl, formName, bodyContent) {
+            // 显示"耐心等待"提示 - 悬浮在输入框附近
+            const inputLoadingOverlay = document.getElementById('inputLoadingOverlay');
+            
+            // 清空之前的内容
+            const responseContainer = document.getElementById('responseContainer');
+            const responseContent = document.getElementById('responseContent');
+            const idDisplay = document.getElementById('idDisplay');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            successMessage.textContent = '';
+            errorMessage.textContent = '';
+            idDisplay.textContent = '';
+            
+            // 显示等待提示
+            inputLoadingOverlay.style.display = 'flex';
+            
+            // 发送POST请求
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10秒超时
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    access_token: "7819316f61b2294e59a2c3dd557d542c", // 固定值
+                    body: bodyContent // 使用拼接后的内容
+                }),
+                signal: controller.signal
+            })
+            .then(response => {
+                clearTimeout(timeoutId); // 清除超时计时器
+                
+                if (!response.ok) {
+                    throw new Error('网络响应不正常');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('提交成功:', data);
+                // 处理响应数据
+                handleResponse(data, formName);
+            })
+            .catch(error => {
+                console.error('提交失败:', error);
+                if (error.name === 'AbortError') {
+                    showError('提交超时，请检查网络连接或稍后重试！', formName);
+                } else {
+                    showError('Sorry，提交失败，请联系作者处理！', formName);
+                }
+            })
+            .finally(() => {
+                // 无论成功失败都隐藏等待提示
+                inputLoadingOverlay.style.display = 'none';
+            });
+        }
+
+        // 处理响应数据
+        function handleResponse(data, formName) {
+            const responseContainer = document.getElementById('responseContainer');
+            const idDisplay = document.getElementById('idDisplay');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // 清空之前的内容
+            successMessage.textContent = '';
+            errorMessage.textContent = '';
+            
+            // 检查是否有id字段
+            if (data && data.id) {
+                // 显示id
+                idDisplay.textContent = `生成脚本专用ID词成功，ID为：${data.id}`;
+                
+                // 显示成功消息
+                successMessage.textContent = '请在脚本Ui对应的输入框填写该ID即可';
+                
+                // 显示响应容器
+                responseContainer.style.display = 'block';
+            } else {
+                // 没有id或响应格式不正确
+                showError('Sorry，提交失败，请联系作者处理！', formName);
+            }
+        }
+
+        // 显示错误信息
+        function showError(message, formName) {
+            const responseContainer = document.getElementById('responseContainer');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            // 清空之前的内容
+            document.getElementById('responseContent').textContent = '';
+            document.getElementById('idDisplay').textContent = '';
+            document.getElementById('successMessage').textContent = '';
+            
+            // 显示错误信息
+            errorMessage.textContent = message;
+            responseContainer.style.display = 'block';
+        }
+
+        // 导航按钮跳转函数
+        function navigateTo(url) {
+            window.location.href = url;
+        }
+        
+        // 为表单1的下拉框添加事件监听
+        document.getElementById('keywordSelect1').addEventListener('change', function() {
+            const selectedValue = this.value;
+            if (selectedValue) {
+                document.getElementById('body1').value = selectedValue;
+            }
+        });
+        
+        // 为表单2的下拉框添加事件监听
+        document.getElementById('keywordSelect2').addEventListener('change', function() {
+            const selectedValue = this.value;
+            if (selectedValue) {
+                document.getElementById('body2').value = selectedValue;
+            }
+        });
+        
+        // 页面加载完成后，为所有表单的sbid输入框设置值
+        window.addEventListener('load', function() {
+            // 获取URL中的sbid参数值，如果没有则使用noid
+            const sbidValue = getSbidFromUrl();
+            
+            // 设置所有表单的sbid输入框值
+            document.getElementById('sbid1').value = sbidValue;
+            document.getElementById('sbid2').value = sbidValue;
+            document.getElementById('sbid3').value = sbidValue;
+        });
+
+        // 获取URL中的sbid参数值，如果没有则返回noid
+        function getSbidFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('sbid') || 'noid';
+        }
+    </script>
+</body>
+</html>
