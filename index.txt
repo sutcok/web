@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>超集合在线Web</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: "Microsoft YaHei", sans-serif;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+        .tab.active {
+            background-color: #fff;
+            border-bottom: 1px solid #fff;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .nav-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .nav-button {
+            padding: 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .nav-button:hover {
+            background-color: #0b7dda;
+        }
+        .response-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success-message {
+            color: #28a745;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+        }
+        
+        /* 新增：等待提示的样式 - 悬浮在输入框附近 */
+        .input-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            display: none; /* 默认隐藏 */
+        }
+        .input-loading-message {
+            background-color: #fff;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            max-width: 80%;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* 新增：空输入提示的样式 - 使用默认黑色文字 */
+        .empty-input-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            display: none; /* 默认隐藏 */
+        }
+        .empty-input-message {
+            background-color: #fff;
+            padding: 15px 25px;
+            border-radius: 4px;
+            font-size: 16px;
+            color: black; /* 明确设置为黑色 */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15)
+        }
+    </style>
+</head>
+<body>
+    <div class="tabs">
+        <div class="tab active" data-tab="formTab1">喜欢关键词</div>
+        <div class="tab" data-tab="formTab2">讨厌关键词</div>
+        <div class="tab" data-tab="formTab3">Spt密钥</div>
+        <div class="tab" data-tab="navTab">导航按钮页</div>
+    </div>
+
+    <!-- 表单提交页1 - 喜欢关键词 -->
+    <div id="formTab1" class="tab-content active">
+        <h2>喜欢词组设定</h2>
+        <form id="form1">
+            <label for="sbid1">设备id：</label>
+            <input type="text" id="sbid1" name="sbid" value="noid" readonly style="background-color: #f1f1f1; cursor: not-allowed;">
+            
+            <select id="issueId1" name="issueId">
+                <option value="ICDSK6">快手</option>
+            </select>
+            <select id="keywordSelect1">
+                <option value="">-- 快速选择(常用词) --</option>
+                <option value="下单/支付/包邮/购物/去看直播/直播中/抢购/购买/旗舰店/专卖店/个体店/企业店/小店/包邮/热卖/卖货/立抢/爆款/如何省钱/直播间告诉你/实惠价格/点击进入直播/退货/运费/严选/坏了包/已售.+件/破损/无理由/包退/晚发/立赔">商品购物</option>
+                <option value="捕/鱼/大咖/鱼乐/达人/三人行/老六/乡村/狠小志">捕鱼游戏</option>
+                <option value="爆款游戏.*捕鱼大咖/捕鱼大咖.*爆款游戏/老六.*捕鱼大咖">指定捕鱼广告</option>
+            </select>
+            <label for="body1">内容：</label>
+            <textarea id="body1" name="body" rows="6" placeholder="词组填写示例：立即购买/立即抢购/了解详情"></textarea>
+            
+            <button type="submit">提交词组</button>
+        </form>
+    </div>
+
+    <!-- 表单提交页2 - 讨厌关键词 -->
+    <div id="formTab2" class="tab-content">
+        <h2>讨厌词组设定</h2>
+        <form id="form2">
+            <label for="sbid2">设备id：</label>
+            <input type="text" id="sbid2" name="sbid" value="noid" readonly style="background-color: #f1f1f1; cursor: not-allowed;">
+            
+            <select id="issueId2" name="issueId">
+                <option value="ICDT98">快手</option>
+            </select>
+            <select id="keywordSelect2">
+                <option value="">-- 快速选择(常用词) --</option>
+                <option value="跳转微信/点我玩玩/试玩游戏/立即试玩/点击即玩/去玩游戏/点击立玩/跳转游戏/无需下载/无需安装/短剧/剧场/新剧/免费观看/热播剧/下一集/立即观看/继续观看/观看全集/观看更多/几集/题材/剧情/免费看视频/抢先看/看全集/超级汇/珠海小叮当/点击额外获取.+金币">自定义词组</option>
+            </select>
+            <label for="body2">内容：</label>
+            <textarea id="body2" name="body" rows="6" placeholder="词组填写示例：立即购买/立即抢购/了解详情"></textarea>
+            
+            <button type="submit">提交词组</button>
+        </form>
+    </div>
+
+    <!-- 表单提交页3 - Spt密钥 -->
+    <div id="formTab3" class="tab-content">
+        <h2>Spt密钥设定</h2>
+        <form id="form3">
+            <label for="sbid3">设备id：</label>
+            <input type="text" id="sbid3" name="sbid" value="noid" readonly style="background-color: #f1f1f1; cursor: not-allowed;">
+            
+            <select id="issueId3" name="issueId">
+                <option value="ICE5C7">Spt</option>
+            </select>
+            <label for="body3">内容：</label>
+            <textarea id="body3" name="body" rows="6" placeholder="密钥填写示例：SPT_XXXXXXXXXXX"></textarea>
+            
+            <button type="submit">提交词组</button>
+        </form>
+    </div>
+
+    <!-- 导航按钮页 -->
+    <div id="navTab" class="tab-content">
+        <h2>导航按钮</h2>
+        <div class="nav-buttons">
+            <button class="nav-button" onclick="navigateTo('https://wxpusher.zjiecode.com/api/qrcode/RwjGLMOPTYp35zSYQr0HxbCPrV9eU0wKVBXU1D5VVtya0cQXEJWPjqBdW3gKLifS.jpg')">在线申请Spt密钥(微通知)</button>
+            <button class="nav-button" onclick="navigateTo('https://gitee.com/sutcok/chaojihe/blob/master/top.html')">金币记录排行榜</button>
+        </div>
+    </div>
+
+    <script>
+        // 标签页切换功能
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 移除所有标签页的active类
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                // 给当前点击的标签页添加active类
+                this.classList.add('active');
+                
+                // 获取目标内容区域
+                const targetTab = this.getAttribute('data-tab');
+                
+                // 隐藏所有内容区域
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // 显示目标内容区域
+                document.getElementById(targetTab).classList.add('active');
+            });
+        });
+
+        // 导航按钮跳转功能
+        function navigateTo(url) {
+            window.open(url, '_blank');
+        }
+    </script>
+</body>
+</html>
